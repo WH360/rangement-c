@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rangement C — organiseur de dossiers</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='6' y='16' width='52' height='38' rx='6' fill='%232563eb'/><path d='M6 22a6 6 0 0 1 6-6h14l6 6h20a6 6 0 0 1 6 6' fill='%2360a5fa'/><path d='M22 36l7 7 13-14' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#f5f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+  --blue:#2563eb;--blue-soft:#eff6ff;--green:#16a34a;--red:#dc2626;--amber:#d97706;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:22px 28px}
+header h1{margin:0;font-size:22px;font-weight:650;display:flex;align-items:center;gap:10px}
+header p{margin:4px 0 0;opacity:.85;font-size:14px}
+main{max-width:1100px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.step{display:flex;align-items:center;gap:10px;font-weight:600;margin:0 0 12px}
+.num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px}
+button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 16px;border-radius:10px;cursor:pointer;transition:.15s}
+button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:600}
+button.primary:hover:not(:disabled){background:#1d4ed8;color:#fff}
+button.big{padding:12px 22px;font-size:16px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.folder{font-family:Consolas,monospace;background:var(--blue-soft);color:#1e40af;padding:6px 12px;border-radius:8px}
+.modes label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);padding:10px 14px;border-radius:10px;cursor:pointer}
+.modes input{accent-color:var(--blue)}
+.modes label:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:6px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.stat b{display:block}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue)}
+.stat small{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:#f8fafc;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+td.size{text-align:right;color:var(--muted);white-space:nowrap}
+td.dest{color:#1e40af}
+.tablewrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.muted{color:var(--muted)}
+.banner{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px}
+.banner.warn{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.banner.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.banner.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+progress{width:100%;height:10px;accent-color:var(--blue)}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 30px}
+details summary{cursor:pointer;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🗂️ Rangement C</h1>
+  <p>Range tes dossiers Windows (Téléchargements, Bureau, Documents…) en un clic. Tout se passe sur ton PC : aucun fichier n'est envoyé sur Internet.</p>
+</header>
+
+<main>
+  <div id="unsupported" class="banner err hidden">
+    Ton navigateur ne permet pas à une page d'accéder à tes dossiers. Ouvre cette page dans <b>Microsoft Edge</b> ou <b>Google Chrome</b> sur ton PC.
+  </div>
+  <div id="msg" class="banner hidden"></div>
+
+  <section class="card">
+    <p class="step"><span class="num">1</span>Choisis le dossier à ranger</p>
+    <div class="row">
+      <button class="primary" id="pick">📁 Choisir un dossier…</button>
+      <span id="folderName" class="muted">Aucun dossier choisi</span>
+    </div>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">
+      Conseil : Téléchargements, Bureau ou Documents. Par sécurité, Windows/Edge refusent l'accès à <code>C:\</code>, <code>Windows</code>, <code>Program Files</code> et <code>AppData</code>.
+    </p>
+  </section>
+
+  <section class="card">
+    <p class="step"><span class="num">2</span>Comment ranger ?</p>
+    <div class="row modes">
+      <label><input type="radio" name="mode" value="type" checked> Par type <span class="muted">(Images, PDF, Vidéos…)</span></label>
+      <label><input type="radio" name="mode" value="date"> Par date <span class="muted">(Année / Mois)</span></label>
+      <label><input type="radio" name="mode" value="type_date"> Par type puis année</label>
+    </div>
+  </section>
+
+  <section class="card" id="previewCard">
+    <p class="step"><span class="num">3</span>Aperçu <span class="muted" style="font-weight:400">— rien n'est déplacé tant que tu ne cliques pas sur « Ranger »</span></p>
+    <div id="summary" class="muted">Choisis un dossier pour voir l'aperçu.</div>
+    <div id="stats" class="stats"></div>
+    <div class="tablewrap hidden" id="tablewrap" style="margin-top:14px">
+      <table><thead><tr><th>Fichier</th><th>Ira dans</th><th style="text-align:right">Taille</th></tr></thead><tbody id="rows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <button class="primary big" id="apply" disabled>✔ Ranger maintenant</button>
+      <button class="big" id="undo" disabled>↶ Annuler le dernier rangement</button>
+      <span id="undoInfo" class="muted" style="font-size:13px"></span>
+    </div>
+    <progress id="prog" class="hidden" value="0" max="1" style="margin-top:14px"></progress>
+  </section>
+
+  <details class="card">
+    <summary>Quels fichiers sont ignorés ?</summary>
+    <p class="muted" style="margin:10px 0 0;font-size:14px">
+      Les sous-dossiers existants (ils restent intacts), les raccourcis (.lnk, .url), les fichiers cachés (commençant par un point),
+      <code>desktop.ini</code>, <code>Thumbs.db</code> et les téléchargements en cours (.crdownload, .part, .tmp).
+      Si un fichier du même nom existe déjà dans le dossier de destination, il est renommé « nom (2) ». Rien n'est jamais supprimé.
+    </p>
+  </details>
+</main>
+<footer>Rangement C · Hicham WAHNOU</footer>
+
+<script>
+const CATEGORIES = {
+  "Images": ["jpg","jpeg","png","gif","bmp","webp","tif","tiff","heic","svg","ico","raw","cr2","nef"],
+  "PDF": ["pdf"],
+  "Documents Word": ["doc","docx","odt","rtf"],
+  "Tableurs": ["xls","xlsx","xlsm","csv","ods","tsv"],
+  "Présentations": ["ppt","pptx","odp","key"],
+  "Textes": ["txt","md","log"],
+  "Vidéos": ["mp4","mkv","avi","mov","wmv","flv","webm","m4v"],
+  "Musique": ["mp3","wav","flac","aac","ogg","m4a","wma"],
+  "Archives": ["zip","rar","7z","tar","gz","bz2","xz"],
+  "Installateurs": ["exe","msi","msix","appx","iso","apk"],
+  "Code": ["py","js","ts","html","css","json","xml","r","ipynb","java","c","cpp","h","sh","bat","ps1","sql","yml","yaml"],
+  "Science": ["fcs","ab1","fasta","fa","gb","pzfx","sav","spv","czi","lif","nd2","mzml"],
+  "Polices": ["ttf","otf","woff","woff2"],
+};
+const EXT = {}; for (const [c, l] of Object.entries(CATEGORIES)) l.forEach(e => EXT[e] = c);
+const OTHER = "Autres";
+const SKIP_NAMES = new Set(["desktop.ini","thumbs.db",".ds_store"]);
+const SKIP_EXTS = new Set(["lnk","url","crdownload","part","tmp","partial","download"]);
+const MOIS = ["01-Janvier","02-Février","03-Mars","04-Avril","05-Mai","06-Juin","07-Juillet","08-Août","09-Septembre","10-Octobre","11-Novembre","12-Décembre"];
+
+const $ = id => document.getElementById(id);
+let root = null, plan = [];
+
+// ---------- IndexedDB (garde le dossier + journal pour pouvoir annuler après rechargement)
+const db = new Promise((res, rej) => {
+  const r = indexedDB.open("rangement-c", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("kv");
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+async function kvGet(k){ const d = await db; return new Promise(r => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(undefined); }); }
+async function kvSet(k, v){ const d = await db; return new Promise(r => { const t = d.transaction("kv","readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = r; t.onerror = r; }); }
+
+// ---------- utilitaires
+const ext = n => { const i = n.lastIndexOf("."); return i > 0 ? n.slice(i+1).toLowerCase() : ""; };
+const catOf = n => EXT[ext(n)] || OTHER;
+function human(n){ const u=["o","Ko","Mo","Go","To"]; let i=0; while(n>=1024&&i<4){n/=1024;i++;} return (i?n.toFixed(1):n)+" "+u[i]; }
+function subPath(name, file, mode){
+  const d = new Date(file.lastModified);
+  if (mode === "date") return [String(d.getFullYear()), MOIS[d.getMonth()]];
+  if (mode === "type_date") return [catOf(name), String(d.getFullYear())];
+  return [catOf(name)];
+}
+function show(text, kind="ok"){ const m=$("msg"); m.className="banner "+kind; m.innerHTML=text; m.scrollIntoView({behavior:"smooth",block:"nearest"}); }
+function hideMsg(){ $("msg").className="banner hidden"; }
+
+async function getDirPath(base, parts, create){
+  let d = base;
+  for (const p of parts) d = await d.getDirectoryHandle(p, {create});
+  return d;
+}
+async function exists(dir, name){
+  try { await dir.getFileHandle(name); return true; } catch { }
+  try { await dir.getDirectoryHandle(name); return true; } catch { return false; }
+}
+async function uniqueName(dirParts, name, taken){
+  let dir = null;
+  try { dir = await getDirPath(root, dirParts, false); } catch { dir = null; }
+  const key = n => (dirParts.join("/")+"/"+n).toLowerCase();
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0,dot) : name, suf = dot > 0 ? name.slice(dot) : "";
+  let cand = name, i = 2;
+  while (taken.has(key(cand)) || (dir && await exists(dir, cand))) cand = `${stem} (${i++})${suf}`;
+  taken.add(key(cand));
+  return cand;
+}
+async function ensurePermission(handle){
+  const o = {mode:"readwrite"};
+  if (await handle.queryPermission(o) === "granted") return true;
+  return (await handle.requestPermission(o)) === "granted";
+}
+
+// déplace un fichier : move() natif si dispo, sinon copie + suppression
+async function moveFile(srcDir, name, dstDir, newName){
+  const fh = await srcDir.getFileHandle(name);
+  if (typeof fh.move === "function") {
+    try { await fh.move(dstDir, newName); return; } catch (e) { /* on passe à la copie */ }
+  }
+  const file = await fh.getFile();
+  const nh = await dstDir.getFileHandle(newName, {create:true});
+  const w = await nh.createWritable();
+  await w.write(file); await w.close();
+  await srcDir.removeEntry(name);
+}
+
+// ---------- aperçu
+async function buildPlan(){
+  if (!root) return;
+  hideMsg();
+  const mode = document.querySelector("input[name=mode]:checked").value;
+  $("summary").textContent = "Analyse en cours…";
+  plan = []; const taken = new Set();
+  const entries = [];
+  for await (const [name, h] of root.entries()) if (h.kind === "file") entries.push([name, h]);
+  entries.sort((a,b) => a[0].localeCompare(b[0], "fr", {sensitivity:"base"}));
+  for (const [name, h] of entries) {
+    const low = name.toLowerCase();
+    if (low.startsWith(".") || SKIP_NAMES.has(low) || SKIP_EXTS.has(ext(name))) continue;
+    let file; try { file = await h.getFile(); } catch { continue; }
+    const parts = subPath(name, file, mode);
+    const newName = await uniqueName(parts, name, taken);
+    plan.push({name, parts, newName, size:file.size});
+  }
+  render();
+}
+
+function render(){
+  const tb = $("rows"); tb.innerHTML = "";
+  const counts = {};
+  for (const p of plan) {
+    const tr = document.createElement("tr");
+    const dest = p.parts.join(" \\ ") + (p.newName !== p.name ? `  →  ${p.newName}` : "");
+    tr.innerHTML = `<td></td><td class="dest"></td><td class="size">${human(p.size)}</td>`;
+    tr.children[0].textContent = p.name; tr.children[1].textContent = dest;
+    tb.appendChild(tr);
+    const c = p.parts[0]; counts[c] = counts[c] || {n:0,s:0}; counts[c].n++; counts[c].s += p.size;
+  }
+  const total = plan.reduce((a,p)=>a+p.size,0);
+  $("tablewrap").classList.toggle("hidden", !plan.length);
+  $("apply").disabled = !plan.length;
+  $("summary").innerHTML = plan.length
+    ? `<b>${plan.length}</b> fichiers à ranger · ${human(total)}`
+    : "✨ Rien à ranger : tous les fichiers sont déjà dans des sous-dossiers.";
+  const max = Math.max(1, ...Object.values(counts).map(c=>c.n));
+  $("stats").innerHTML = Object.entries(counts).sort((a,b)=>b[1].n-a[1].n).map(([k,c]) =>
+    `<div class="stat"><b>${k}</b><small>${c.n} fichier${c.n>1?"s":""} · ${human(c.s)}</small><div class="bar"><i style="width:${100*c.n/max}%"></i></div></div>`).join("");
+}
+
+// ---------- ranger
+async function apply(){
+  if (!plan.length) return;
+  if (!confirm(`Déplacer ${plan.length} fichiers dans des sous-dossiers ?\n\nRien n'est supprimé, et tu pourras annuler.`)) return;
+  if (!await ensurePermission(root)) { show("Permission refusée : impossible de modifier ce dossier.", "err"); return; }
+  const prog = $("prog"); prog.classList.remove("hidden"); prog.max = plan.length; prog.value = 0;
+  $("apply").disabled = $("undo").disabled = $("pick").disabled = true;
+  const done = [], errors = [];
+  for (const p of plan) {
+    try {
+      const dst = await getDirPath(root, p.parts, true);
+      let finalName = p.newName;
+      if (await exists(dst, finalName)) finalName = await uniqueName(p.parts, p.name, new Set());
+      await moveFile(root, p.name, dst, finalName);
+      done.push({from:p.name, parts:p.parts, to:finalName});
+    } catch (e) { errors.push(`${p.name} : ${e.message || e}`); }
+    prog.value++;
+  }
+  prog.classList.add("hidden");
+  $("pick").disabled = false;
+  if (done.length) await kvSet("last", {root, folder: root.name, date: new Date().toISOString(), moves: done});
+  await refreshUndo();
+  let html = `✅ <b>${done.length}</b> fichiers rangés dans « ${escapeHtml(root.name)} ».`;
+  if (errors.length) html += `<br><br>⚠️ ${errors.length} non déplacés (souvent : fichier ouvert dans un autre programme) :<br>` + errors.slice(0,10).map(escapeHtml).join("<br>");
+  await buildPlan();
+  show(html, errors.length ? "warn" : "ok");
+}
+
+// ---------- annuler
+async function undo(){
+  const last = await kvGet("last");
+  if (!last) return;
+  if (!confirm(`Remettre en place les ${last.moves.length} fichiers du rangement de « ${last.folder} » ?`)) return;
+  const r = last.root;
+  if (!await ensurePermission(r)) { show("Permission refusée.", "err"); return; }
+  const prevRoot = root; root = r;
+  const prog = $("prog"); prog.classList.remove("hidden"); prog.max = last.moves.length; prog.value = 0;
+  let ok = 0; const errors = []; const dirs = new Set();
+  for (const m of [...last.moves].reverse()) {
+    try {
+      const src = await getDirPath(r, m.parts, false);
+      let back = m.from;
+      if (await exists(r, back)) back = await uniqueName([], m.from, new Set());
+      await moveFile(src, m.to, r, back);
+      ok++;
+      for (let i = m.parts.length; i > 0; i--) dirs.add(m.parts.slice(0,i).join("\u0000"));
+    } catch (e) { errors.push(`${m.to} : introuvable ou bloqué`); }
+    prog.value++;
+  }
+  // supprime les sous-dossiers devenus vides (les plus profonds d'abord)
+  for (const key of [...dirs].sort((a,b)=>b.split("\u0000").length-a.split("\u0000").length)) {
+    const parts = key.split("\u0000");
+    try {
+      const d = await getDirPath(r, parts, false);
+      let empty = true; for await (const _ of d.keys()) { empty = false; break; }
+      if (empty) { const parent = await getDirPath(r, parts.slice(0,-1), false); await parent.removeEntry(parts.at(-1)); }
+    } catch {}
+  }
+  prog.classList.add("hidden");
+  await kvSet("last", null);
+  await refreshUndo();
+  root = prevRoot || r;
+  if (!prevRoot) { $("folderName").innerHTML = `<span class="folder">${escapeHtml(r.name)}</span>`; }
+  await buildPlan();
+  show(`↶ <b>${ok}</b> fichiers remis à leur place.` + (errors.length ? "<br>" + errors.slice(0,10).map(escapeHtml).join("<br>") : ""), errors.length ? "warn" : "ok");
+}
+
+async function refreshUndo(){
+  const last = await kvGet("last");
+  $("undo").disabled = !last;
+  $("undoInfo").textContent = last ? `Dernier rangement : « ${last.folder} », ${last.moves.length} fichiers, ${new Date(last.date).toLocaleString("fr-FR")}` : "";
+}
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- démarrage
+if (!("showDirectoryPicker" in window)) {
+  $("unsupported").classList.remove("hidden");
+  $("pick").disabled = true;
+}
+$("pick").onclick = async () => {
+  try {
+    const h = await window.showDirectoryPicker({id:"rangement-c", mode:"readwrite", startIn:"downloads"});
+    root = h;
+    $("folderName").innerHTML = `<span class="folder">${escapeHtml(h.name)}</span>`;
+    await buildPlan();
+  } catch (e) {
+    if (e.name !== "AbortError") show("Ce dossier ne peut pas être utilisé : " + escapeHtml(e.message), "err");
+  }
+};
+document.querySelectorAll("input[name=mode]").forEach(r => r.onchange = buildPlan);
+$("apply").onclick = apply;
+$("undo").onclick = undo;
+refreshUndo();
+</script>
+</body>
+</html>
