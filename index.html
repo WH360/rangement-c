@@ -19,7 +19,7 @@ header p{margin:4px 0 0;opacity:.85;font-size:14px}
 main{max-width:1100px;margin:0 auto;padding:22px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .step{display:flex;align-items:center;gap:10px;font-weight:600;margin:0 0 12px}
-.num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px}
+.num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px;flex:none}
 button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 16px;border-radius:10px;cursor:pointer;transition:.15s}
 button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
 button:disabled{opacity:.45;cursor:not-allowed}
@@ -31,6 +31,8 @@ button.big{padding:12px 22px;font-size:16px}
 .modes label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);padding:10px 14px;border-radius:10px;cursor:pointer}
 .modes input{accent-color:var(--blue)}
 .modes label:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.opt{display:flex;gap:8px;align-items:flex-start;margin-top:12px;cursor:pointer}
+.opt input{margin-top:4px;accent-color:var(--blue)}
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:6px}
 .stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .stat b{display:block}
@@ -38,18 +40,28 @@ button.big{padding:12px 22px;font-size:16px}
 .bar i{display:block;height:100%;background:var(--blue)}
 .stat small{color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
-th{position:sticky;top:0;background:#f8fafc;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:#f8fafc;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;z-index:1}
 td.size{text-align:right;color:var(--muted);white-space:nowrap}
 td.dest{color:#1e40af}
-.tablewrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+td small{color:var(--muted);display:block;font-size:12px}
+tr.stay td{color:var(--muted)}
+tr.stay td.dest{color:var(--amber)}
+.tablewrap{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .muted{color:var(--muted)}
 .banner{padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:14px}
 .banner.warn{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
 .banner.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}
 .banner.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.busy{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px;color:var(--muted)}
 progress{width:100%;height:10px;accent-color:var(--blue)}
 .hidden{display:none!important}
+.dupgroup{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+.dupgroup .head{display:flex;justify-content:space-between;font-weight:600}
+.dupgroup ul{margin:6px 0 0;padding-left:20px;font-size:13px;font-family:Consolas,monospace}
+.dupgroup li.keep{color:var(--green)}
+.dupgroup li.copy{color:var(--red)}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--blue-soft);color:#1e40af;margin-left:6px;font-family:"Segoe UI",sans-serif}
 footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 30px}
 details summary{cursor:pointer;color:var(--muted)}
 </style>
@@ -81,17 +93,28 @@ details summary{cursor:pointer;color:var(--muted)}
     <p class="step"><span class="num">2</span>Comment ranger ?</p>
     <div class="row modes">
       <label><input type="radio" name="mode" value="type" checked> Par type <span class="muted">(Images, PDF, Vidéos…)</span></label>
+      <label><input type="radio" name="mode" value="sujet"> Par sujet <span class="muted">(lit les PDF/Word)</span></label>
       <label><input type="radio" name="mode" value="date"> Par date <span class="muted">(Année / Mois)</span></label>
       <label><input type="radio" name="mode" value="type_date"> Par type puis année</label>
     </div>
+    <p id="sujetHelp" class="muted hidden" style="font-size:13px;margin:10px 0 0">
+      📖 L'appli lit le texte des PDF, Word et fichiers texte pour les classer en : Factures &amp; Reçus, CV &amp; Candidatures,
+      Articles scientifiques, Protocoles &amp; Labo, Administratif, Banque &amp; Finances, Voyages &amp; Réservations, Cours &amp; Formation.
+      Si le sujet n'est pas clair, le fichier est rangé par type. La lecture se fait sur ton PC.
+    </p>
+    <label class="opt"><input type="checkbox" id="withDirs" checked>
+      <span><b>Ranger aussi les sous-dossiers selon leur contenu</b><br>
+      <span class="muted" style="font-size:13px">Un dossier rempli de photos va dans « Images », un dossier de PDF dans « PDF », etc. Il est déplacé en entier et son contenu n'est pas modifié. Les dossiers mélangés et les logiciels restent en place.</span></span>
+    </label>
   </section>
 
   <section class="card" id="previewCard">
     <p class="step"><span class="num">3</span>Aperçu <span class="muted" style="font-weight:400">— rien n'est déplacé tant que tu ne cliques pas sur « Ranger »</span></p>
     <div id="summary" class="muted">Choisis un dossier pour voir l'aperçu.</div>
+    <div id="busy" class="busy hidden"><progress id="aprog" value="0" max="1"></progress><span id="busyText" style="white-space:nowrap"></span></div>
     <div id="stats" class="stats"></div>
     <div class="tablewrap hidden" id="tablewrap" style="margin-top:14px">
-      <table><thead><tr><th>Fichier</th><th>Ira dans</th><th style="text-align:right">Taille</th></tr></thead><tbody id="rows"></tbody></table>
+      <table><thead><tr><th>Élément</th><th>Ira dans</th><th style="text-align:right">Taille</th></tr></thead><tbody id="rows"></tbody></table>
     </div>
   </section>
 
@@ -104,17 +127,30 @@ details summary{cursor:pointer;color:var(--muted)}
     <progress id="prog" class="hidden" value="0" max="1" style="margin-top:14px"></progress>
   </section>
 
+  <section class="card">
+    <p class="step"><span class="num" style="background:#7c3aed">⧉</span>Doublons</p>
+    <p class="muted" style="margin:0 0 12px;font-size:14px">Cherche les fichiers <b>strictement identiques</b> (même contenu, même si le nom diffère) dans le dossier choisi et tous ses sous-dossiers.</p>
+    <div class="row">
+      <button id="dupScan" disabled>🔍 Chercher les doublons</button>
+      <button id="dupMove" class="hidden">Déplacer les copies dans « _Doublons »</button>
+    </div>
+    <div id="dupBusy" class="busy hidden"><progress id="dprog" value="0" max="1"></progress><span id="dupBusyText" style="white-space:nowrap"></span></div>
+    <div id="dupSummary" style="margin-top:10px"></div>
+    <div id="dupList" style="max-height:460px;overflow:auto"></div>
+  </section>
+
   <details class="card">
     <summary>Quels fichiers sont ignorés ?</summary>
     <p class="muted" style="margin:10px 0 0;font-size:14px">
-      Les sous-dossiers existants (ils restent intacts), les raccourcis (.lnk, .url), les fichiers cachés (commençant par un point),
-      <code>desktop.ini</code>, <code>Thumbs.db</code> et les téléchargements en cours (.crdownload, .part, .tmp).
-      Si un fichier du même nom existe déjà dans le dossier de destination, il est renommé « nom (2) ». Rien n'est jamais supprimé.
+      Les raccourcis (.lnk, .url), les fichiers cachés (commençant par un point), <code>desktop.ini</code>, <code>Thumbs.db</code>,
+      les téléchargements en cours (.crdownload, .part, .tmp) et les dossiers déjà créés par l'appli (Images, PDF, 2025…).
+      Si un fichier du même nom existe déjà à la destination, il est renommé « nom (2) ». Rien n'est jamais supprimé.
     </p>
   </details>
 </main>
 <footer>Rangement C · Hicham WAHNOU</footer>
 
+<script src="vendor/jszip.min.js"></script>
 <script>
 const CATEGORIES = {
   "Images": ["jpg","jpeg","png","gif","bmp","webp","tif","tiff","heic","svg","ico","raw","cr2","nef"],
@@ -136,9 +172,30 @@ const OTHER = "Autres";
 const SKIP_NAMES = new Set(["desktop.ini","thumbs.db",".ds_store"]);
 const SKIP_EXTS = new Set(["lnk","url","crdownload","part","tmp","partial","download"]);
 const MOIS = ["01-Janvier","02-Février","03-Mars","04-Avril","05-Mai","06-Juin","07-Juillet","08-Août","09-Septembre","10-Octobre","11-Novembre","12-Décembre"];
+const DUP_DIR = "_Doublons";
+const SOFTWARE_EXTS = new Set(["dll","sys","so","dylib","jar","pak","dat"]);
+const PROJECT_MARKERS = new Set([".git","package.json","requirements.txt","pyproject.toml","node_modules",".vscode","renv",".rproj.user","venv",".venv"]);
+
+// --- sujets : mots-clés dans le texte (kw) et dans le nom du fichier (fn)
+const TOPICS = {
+  "Factures & Reçus": {kw:["facture","invoice","montant ttc","total ttc","tva","vat","recu","receipt","net a payer","total a payer","bon de commande","devis","quittance","order number","numero de commande","payment received"], fn:["facture","invoice","recu","receipt","devis","quittance","commande","order"]},
+  "CV & Candidatures": {kw:["curriculum vitae","lettre de motivation","cover letter","candidature","experience professionnelle","professional experience","work experience","competences","skills","h-index","research interests","objet : candidature","dear hiring","je me permets de","application for","position of"], fn:["cv","resume","motivation","candidature","cover","application","lettre"]},
+  "Articles scientifiques": {kw:["abstract","doi","et al","materials and methods","methods","results","discussion","conclusion","references","keywords","journal","received","accepted","published","elsevier","springer","mdpi","frontiers","plos","pubmed","copyright","manuscript"], fn:["article","paper","doi","journal","review","manuscript","preprint"]},
+  "Protocoles & Labo": {kw:["protocole","protocol","mode operatoire","sop","reactif","reagent","incuber","incubate","incubation","centrifug","dilution","µl","puits","wells","plaque","culture cellulaire","cell culture","elisa","pcr","rt-pcr","tcid50","vaccin","vaccine","titrage","titration","serum","anticorps","antibody","bsl","inoculum","lot n"], fn:["protocole","protocol","sop","manip","plan","experimental","elisa","pcr","titrage"]},
+  "Administratif": {kw:["attestation","certificat","certificate","contrat","contract","demande","objet :","ministere","administration","declaration","reference du dossier","fait a","cnss","assurance","mutuelle","bulletin de paie","fiche de paie","payslip","visa","prefecture","convocation","diplome"], fn:["attestation","contrat","certificat","administratif","declaration","convocation","diplome","bulletin","paie"]},
+  "Banque & Finances": {kw:["releve de compte","releve bancaire","bank statement","banque","bank","virement","transfer","solde","balance","iban","bic","swift","debit","credit","echeance","pret","agios"], fn:["releve","banque","bank","statement","virement"]},
+  "Voyages & Réservations": {kw:["reservation","booking","vol","flight","boarding pass","carte d'embarquement","hotel","check-in","itinerary","itineraire","billet","e-ticket","passager","passenger","depart","arrival","gate","airbnb"], fn:["billet","ticket","booking","reservation","boarding","vol","flight","hotel"]},
+  "Cours & Formation": {kw:["cours","chapitre","chapter","exercice","exercise","examen","exam","module","travaux pratiques","travaux diriges","lecture","syllabus","quiz","semestre","universite","master","licence"], fn:["cours","td","tp","chapitre","lecture","exam","examen","module","slides"]},
+};
+const TOPIC_RX = {};
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const rxEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// une expression de plusieurs mots (« total ttc ») compte double : plus spécifique qu'un mot seul
+for (const [t, d] of Object.entries(TOPICS)) TOPIC_RX[t] = d.kw.map(k => ({rx: new RegExp("(^|[^a-z0-9])" + rxEsc(norm(k)) + "(?=$|[^a-z0-9])", "g"), w: k.includes(" ") ? 2 : 1}));
+const READABLE = new Set(["pdf","docx","txt","md","csv","rtf","html","htm","tsv","log"]);
 
 const $ = id => document.getElementById(id);
-let root = null, plan = [];
+let root = null, plan = [], dupPlan = [], planToken = 0;
 
 // ---------- IndexedDB (garde le dossier + journal pour pouvoir annuler après rechargement)
 const db = new Promise((res, rej) => {
@@ -153,14 +210,19 @@ async function kvSet(k, v){ const d = await db; return new Promise(r => { const 
 const ext = n => { const i = n.lastIndexOf("."); return i > 0 ? n.slice(i+1).toLowerCase() : ""; };
 const catOf = n => EXT[ext(n)] || OTHER;
 function human(n){ const u=["o","Ko","Mo","Go","To"]; let i=0; while(n>=1024&&i<4){n/=1024;i++;} return (i?n.toFixed(1):n)+" "+u[i]; }
-function subPath(name, file, mode){
-  const d = new Date(file.lastModified);
-  if (mode === "date") return [String(d.getFullYear()), MOIS[d.getMonth()]];
-  if (mode === "type_date") return [catOf(name), String(d.getFullYear())];
-  return [catOf(name)];
-}
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function show(text, kind="ok"){ const m=$("msg"); m.className="banner "+kind; m.innerHTML=text; m.scrollIntoView({behavior:"smooth",block:"nearest"}); }
 function hideMsg(){ $("msg").className="banner hidden"; }
+const ignoredFile = name => { const low = name.toLowerCase(); return low.startsWith(".") || SKIP_NAMES.has(low) || SKIP_EXTS.has(ext(name)); };
+function reservedDir(name){
+  return name === DUP_DIR || name === OTHER || name in CATEGORIES || name in TOPICS || /^\d{4}$/.test(name) || MOIS.includes(name) || name.startsWith(".") || name.startsWith("$");
+}
+function dateParts(ts, mode, base){
+  const d = new Date(ts);
+  if (mode === "date") return [String(d.getFullYear()), MOIS[d.getMonth()]];
+  if (mode === "type_date") return [base, String(d.getFullYear())];
+  return [base];
+}
 
 async function getDirPath(base, parts, create){
   let d = base;
@@ -171,11 +233,11 @@ async function exists(dir, name){
   try { await dir.getFileHandle(name); return true; } catch { }
   try { await dir.getDirectoryHandle(name); return true; } catch { return false; }
 }
-async function uniqueName(dirParts, name, taken){
+async function uniqueName(dirParts, name, taken, isDir=false){
   let dir = null;
   try { dir = await getDirPath(root, dirParts, false); } catch { dir = null; }
   const key = n => (dirParts.join("/")+"/"+n).toLowerCase();
-  const dot = name.lastIndexOf(".");
+  const dot = isDir ? -1 : name.lastIndexOf(".");
   const stem = dot > 0 ? name.slice(0,dot) : name, suf = dot > 0 ? name.slice(dot) : "";
   let cand = name, i = 2;
   while (taken.has(key(cand)) || (dir && await exists(dir, cand))) cand = `${stem} (${i++})${suf}`;
@@ -188,11 +250,11 @@ async function ensurePermission(handle){
   return (await handle.requestPermission(o)) === "granted";
 }
 
-// déplace un fichier : move() natif si dispo, sinon copie + suppression
+// ---------- déplacements (move() natif si dispo, sinon copie puis suppression)
 async function moveFile(srcDir, name, dstDir, newName){
   const fh = await srcDir.getFileHandle(name);
   if (typeof fh.move === "function") {
-    try { await fh.move(dstDir, newName); return; } catch (e) { /* on passe à la copie */ }
+    try { await fh.move(dstDir, newName); return; } catch (e) { /* copie */ }
   }
   const file = await fh.getFile();
   const nh = await dstDir.getFileHandle(newName, {create:true});
@@ -200,83 +262,238 @@ async function moveFile(srcDir, name, dstDir, newName){
   await w.write(file); await w.close();
   await srcDir.removeEntry(name);
 }
+async function copyDir(src, dst){
+  let n = 0;
+  for await (const [name, h] of src.entries()) {
+    if (h.kind === "file") {
+      const nh = await dst.getFileHandle(name, {create:true});
+      const w = await nh.createWritable(); await w.write(await h.getFile()); await w.close(); n++;
+    } else {
+      n += await copyDir(h, await dst.getDirectoryHandle(name, {create:true}));
+    }
+  }
+  return n;
+}
+async function countFiles(dir){ let n = 0; for await (const h of dir.values()) n += h.kind === "file" ? 1 : await countFiles(h); return n; }
+async function moveDir(srcParent, name, dstParent, newName){
+  const dh = await srcParent.getDirectoryHandle(name);
+  if (typeof dh.move === "function") {
+    try { await dh.move(dstParent, newName); return; } catch (e) { /* copie */ }
+  }
+  const before = await countFiles(dh);
+  const target = await dstParent.getDirectoryHandle(newName, {create:true});
+  const copied = await copyDir(dh, target);
+  if (copied !== before) throw new Error(`copie incomplète (${copied}/${before}), l'original est conservé`);
+  await srcParent.removeEntry(name, {recursive:true});
+}
+async function moveEntry(kind, srcDir, name, dstDir, newName){
+  return kind === "dir" ? moveDir(srcDir, name, dstDir, newName) : moveFile(srcDir, name, dstDir, newName);
+}
+
+// ---------- lecture du contenu
+let pdfjs = null;
+async function loadPdf(){
+  if (!pdfjs) {
+    pdfjs = await import("./vendor/pdf.min.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL("vendor/pdf.worker.min.mjs", location.href).href;
+  }
+  return pdfjs;
+}
+async function extractText(file){
+  const e = ext(file.name);
+  if (file.size > 60 * 1024 * 1024) return "";
+  try {
+    if (e === "pdf") {
+      const lib = await loadPdf();
+      const doc = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer()), isEvalSupported:false}).promise;
+      let t = "";
+      for (let i = 1; i <= Math.min(doc.numPages, 3); i++) {
+        const c = await (await doc.getPage(i)).getTextContent();
+        t += c.items.map(x => x.str).join(" ") + "\n";
+      }
+      doc.destroy();
+      return t;
+    }
+    if (e === "docx") {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const xml = await zip.file("word/document.xml")?.async("string");
+      return xml ? xml.replace(/<\/w:p>/g, "\n").replace(/<[^>]+>/g, " ").slice(0, 200000) : "";
+    }
+    return await file.slice(0, 200000).text();
+  } catch { return ""; }
+}
+function topicOf(name, text){
+  const t = norm(text || "");
+  const tokens = norm(name.replace(/\.[^.]+$/, "")).split(/[^a-z0-9]+/).filter(Boolean);
+  const scores = [];
+  for (const [topic, d] of Object.entries(TOPICS)) {
+    let s = 0;
+    for (const {rx, w} of TOPIC_RX[topic]) { rx.lastIndex = 0; const m = t.match(rx); if (m) s += w * Math.min(m.length, 3); }
+    for (const f of d.fn) if (tokens.some(tok => tok === f || (f.length >= 4 && tok.startsWith(f)))) s += 5;
+    scores.push([topic, s]);
+  }
+  scores.sort((a,b) => b[1]-a[1]);
+  const [best, second] = scores;
+  return best[1] >= 5 && best[1] >= second[1] * 1.5 ? best[0] : null;
+}
+
+// ---------- analyse d'un sous-dossier
+async function profileDir(dir, limit = 3000){
+  const counts = {}; let files = 0, size = 0, newest = 0, project = false, software = 0;
+  async function walk(d, depth){
+    for await (const [name, h] of d.entries()) {
+      if (files >= limit) return;
+      const low = name.toLowerCase();
+      if (depth === 0 && PROJECT_MARKERS.has(low)) project = true;
+      if (h.kind === "directory") { if (PROJECT_MARKERS.has(low)) project = true; if (depth < 6 && low !== "node_modules" && low !== ".git") await walk(h, depth+1); continue; }
+      if (ignoredFile(name)) continue;
+      files++;
+      if (SOFTWARE_EXTS.has(ext(name))) software++;
+      const c = catOf(name); counts[c] = (counts[c]||0) + 1;
+      try { const f = await h.getFile(); size += f.size; newest = Math.max(newest, f.lastModified); } catch {}
+    }
+  }
+  await walk(dir, 0);
+  return {counts, files, size, newest, project, software};
+}
+function classifyDir(p){
+  if (!p.files) return {stay:"dossier vide"};
+  if (p.software >= 3 || (p.counts["Installateurs"] && p.software)) return {stay:"logiciel : le déplacer pourrait le casser"};
+  if (p.project) return {cat:"Code", why:"projet de code"};
+  const [top, n] = Object.entries(p.counts).sort((a,b)=>b[1]-a[1])[0];
+  const share = n / p.files;
+  if (share >= 0.6) return {cat: top, why: `${Math.round(share*100)} % ${top.toLowerCase()}`};
+  return {stay:"contenu mélangé"};
+}
 
 // ---------- aperçu
+function setBusy(on, text="", val=0, max=1){
+  $("busy").classList.toggle("hidden", !on);
+  $("busyText").textContent = text; $("aprog").max = max; $("aprog").value = val;
+}
 async function buildPlan(){
   if (!root) return;
+  const token = ++planToken;
   hideMsg();
   const mode = document.querySelector("input[name=mode]:checked").value;
+  const withDirs = $("withDirs").checked;
   $("summary").textContent = "Analyse en cours…";
-  plan = []; const taken = new Set();
-  const entries = [];
-  for await (const [name, h] of root.entries()) if (h.kind === "file") entries.push([name, h]);
-  entries.sort((a,b) => a[0].localeCompare(b[0], "fr", {sensitivity:"base"}));
-  for (const [name, h] of entries) {
-    const low = name.toLowerCase();
-    if (low.startsWith(".") || SKIP_NAMES.has(low) || SKIP_EXTS.has(ext(name))) continue;
-    let file; try { file = await h.getFile(); } catch { continue; }
-    const parts = subPath(name, file, mode);
-    const newName = await uniqueName(parts, name, taken);
-    plan.push({name, parts, newName, size:file.size});
+  $("apply").disabled = true;
+  const items = [], taken = new Set();
+  const files = [], dirs = [];
+  for await (const [name, h] of root.entries()) {
+    if (h.kind === "file" && !ignoredFile(name)) files.push([name, h]);
+    else if (h.kind === "directory" && withDirs && !reservedDir(name)) dirs.push([name, h]);
   }
+  const byName = (a,b) => a[0].localeCompare(b[0], "fr", {sensitivity:"base"});
+  files.sort(byName); dirs.sort(byName);
+  const total = files.length + dirs.length; let done = 0;
+  setBusy(true, "", 0, Math.max(total,1));
+
+  for (const [name, h] of files) {
+    if (token !== planToken) return;
+    let file; try { file = await h.getFile(); } catch { continue; }
+    let base = catOf(name), why = "";
+    if (mode === "sujet") {
+      setBusy(true, `Lecture : ${name}`, done, total);
+      const text = READABLE.has(ext(name)) ? await extractText(file) : "";
+      const t = topicOf(name, text);
+      if (t) { base = t; why = READABLE.has(ext(name)) ? "sujet détecté" : "d'après le nom"; }
+    }
+    const parts = mode === "sujet" ? [base] : dateParts(file.lastModified, mode, base);
+    const newName = await uniqueName(parts, name, taken);
+    items.push({kind:"file", fromParts:[], name, parts, newName, size:file.size, why});
+    setBusy(true, `${++done} / ${total}`, done, total);
+  }
+  for (const [name, h] of dirs) {
+    if (token !== planToken) return;
+    setBusy(true, `Analyse du dossier : ${name}`, done, total);
+    const p = await profileDir(h);
+    const c = classifyDir(p);
+    if (c.stay) items.push({kind:"dir", fromParts:[], name, stay:c.stay, size:p.size, files:p.files});
+    else {
+      const parts = mode === "date" ? dateParts(p.newest || Date.now(), "date") : mode === "type_date" ? dateParts(p.newest || Date.now(), "type_date", c.cat) : [c.cat];
+      const newName = await uniqueName(parts, name, taken, true);
+      items.push({kind:"dir", fromParts:[], name, parts, newName, size:p.size, files:p.files, why:c.why});
+    }
+    setBusy(true, `${++done} / ${total}`, done, total);
+  }
+  if (token !== planToken) return;
+  setBusy(false);
+  plan = items;
   render();
 }
 
 function render(){
   const tb = $("rows"); tb.innerHTML = "";
   const counts = {};
+  const moving = plan.filter(p => !p.stay);
   for (const p of plan) {
     const tr = document.createElement("tr");
-    const dest = p.parts.join(" \\ ") + (p.newName !== p.name ? `  →  ${p.newName}` : "");
+    if (p.stay) tr.className = "stay";
+    const label = (p.kind === "dir" ? "📁 " : "") + p.name;
+    const sub = p.kind === "dir" ? `${p.files} fichier${p.files>1?"s":""}${p.why ? " · " + p.why : ""}` : (p.why || "");
+    const dest = p.stay ? `reste en place (${p.stay})` : p.parts.join(" \\ ") + (p.newName !== p.name ? `  →  ${p.newName}` : "");
     tr.innerHTML = `<td></td><td class="dest"></td><td class="size">${human(p.size)}</td>`;
-    tr.children[0].textContent = p.name; tr.children[1].textContent = dest;
+    tr.children[0].textContent = label;
+    if (sub) { const s = document.createElement("small"); s.textContent = sub; tr.children[0].appendChild(s); }
+    tr.children[1].textContent = dest;
     tb.appendChild(tr);
-    const c = p.parts[0]; counts[c] = counts[c] || {n:0,s:0}; counts[c].n++; counts[c].s += p.size;
+    if (!p.stay) { const c = p.parts[0]; counts[c] = counts[c] || {n:0,s:0}; counts[c].n++; counts[c].s += p.size; }
   }
-  const total = plan.reduce((a,p)=>a+p.size,0);
+  const total = moving.reduce((a,p)=>a+p.size,0);
+  const nd = moving.filter(p=>p.kind==="dir").length, nf = moving.length - nd;
   $("tablewrap").classList.toggle("hidden", !plan.length);
-  $("apply").disabled = !plan.length;
-  $("summary").innerHTML = plan.length
-    ? `<b>${plan.length}</b> fichiers à ranger · ${human(total)}`
-    : "✨ Rien à ranger : tous les fichiers sont déjà dans des sous-dossiers.";
+  $("apply").disabled = !moving.length;
+  $("summary").innerHTML = moving.length
+    ? `<b>${nf}</b> fichier${nf>1?"s":""}${nd ? ` et <b>${nd}</b> dossier${nd>1?"s":""}` : ""} à ranger · ${human(total)}`
+    : "✨ Rien à ranger ici.";
   const max = Math.max(1, ...Object.values(counts).map(c=>c.n));
   $("stats").innerHTML = Object.entries(counts).sort((a,b)=>b[1].n-a[1].n).map(([k,c]) =>
-    `<div class="stat"><b>${k}</b><small>${c.n} fichier${c.n>1?"s":""} · ${human(c.s)}</small><div class="bar"><i style="width:${100*c.n/max}%"></i></div></div>`).join("");
+    `<div class="stat"><b>${escapeHtml(k)}</b><small>${c.n} élément${c.n>1?"s":""} · ${human(c.s)}</small><div class="bar"><i style="width:${100*c.n/max}%"></i></div></div>`).join("");
 }
 
-// ---------- ranger
-async function apply(){
-  if (!plan.length) return;
-  if (!confirm(`Déplacer ${plan.length} fichiers dans des sous-dossiers ?\n\nRien n'est supprimé, et tu pourras annuler.`)) return;
-  if (!await ensurePermission(root)) { show("Permission refusée : impossible de modifier ce dossier.", "err"); return; }
-  const prog = $("prog"); prog.classList.remove("hidden"); prog.max = plan.length; prog.value = 0;
-  $("apply").disabled = $("undo").disabled = $("pick").disabled = true;
+// ---------- exécution + journal
+async function runMoves(items, title){
+  if (!await ensurePermission(root)) { show("Permission refusée : impossible de modifier ce dossier.", "err"); return null; }
+  const prog = $("prog"); prog.classList.remove("hidden"); prog.max = items.length; prog.value = 0;
+  ["apply","undo","pick","dupScan","dupMove"].forEach(id => $(id).disabled = true);
   const done = [], errors = [];
-  for (const p of plan) {
+  for (const p of items) {
     try {
+      const src = await getDirPath(root, p.fromParts, false);
       const dst = await getDirPath(root, p.parts, true);
       let finalName = p.newName;
-      if (await exists(dst, finalName)) finalName = await uniqueName(p.parts, p.name, new Set());
-      await moveFile(root, p.name, dst, finalName);
-      done.push({from:p.name, parts:p.parts, to:finalName});
+      if (await exists(dst, finalName)) finalName = await uniqueName(p.parts, p.name, new Set(), p.kind === "dir");
+      await moveEntry(p.kind, src, p.name, dst, finalName);
+      done.push({kind:p.kind, fromParts:p.fromParts, from:p.name, parts:p.parts, to:finalName});
     } catch (e) { errors.push(`${p.name} : ${e.message || e}`); }
     prog.value++;
   }
   prog.classList.add("hidden");
-  $("pick").disabled = false;
-  if (done.length) await kvSet("last", {root, folder: root.name, date: new Date().toISOString(), moves: done});
+  $("pick").disabled = false; $("dupScan").disabled = false;
+  if (done.length) await kvSet("last", {root, folder: root.name, title, date: new Date().toISOString(), moves: done});
   await refreshUndo();
-  let html = `✅ <b>${done.length}</b> fichiers rangés dans « ${escapeHtml(root.name)} ».`;
-  if (errors.length) html += `<br><br>⚠️ ${errors.length} non déplacés (souvent : fichier ouvert dans un autre programme) :<br>` + errors.slice(0,10).map(escapeHtml).join("<br>");
-  await buildPlan();
-  show(html, errors.length ? "warn" : "ok");
+  return {done, errors};
 }
 
-// ---------- annuler
+async function apply(){
+  const items = plan.filter(p => !p.stay);
+  if (!items.length) return;
+  const nd = items.filter(p=>p.kind==="dir").length;
+  if (!confirm(`Déplacer ${items.length - nd} fichiers${nd ? ` et ${nd} dossiers` : ""} ?\n\nRien n'est supprimé, et tu pourras annuler.`)) return;
+  const r = await runMoves(items, "rangement");
+  if (!r) return;
+  let html = `✅ <b>${r.done.length}</b> éléments rangés dans « ${escapeHtml(root.name)} ».`;
+  if (r.errors.length) html += `<br><br>⚠️ ${r.errors.length} non déplacés (souvent : fichier ouvert dans un autre programme) :<br>` + r.errors.slice(0,10).map(escapeHtml).join("<br>");
+  await buildPlan();
+  show(html, r.errors.length ? "warn" : "ok");
+}
+
 async function undo(){
   const last = await kvGet("last");
   if (!last) return;
-  if (!confirm(`Remettre en place les ${last.moves.length} fichiers du rangement de « ${last.folder} » ?`)) return;
+  if (!confirm(`Remettre en place les ${last.moves.length} éléments du dernier ${last.title || "rangement"} de « ${last.folder} » ?`)) return;
   const r = last.root;
   if (!await ensurePermission(r)) { show("Permission refusée.", "err"); return; }
   const prevRoot = root; root = r;
@@ -285,15 +502,16 @@ async function undo(){
   for (const m of [...last.moves].reverse()) {
     try {
       const src = await getDirPath(r, m.parts, false);
+      const dst = await getDirPath(r, m.fromParts || [], true);
       let back = m.from;
-      if (await exists(r, back)) back = await uniqueName([], m.from, new Set());
-      await moveFile(src, m.to, r, back);
+      if (await exists(dst, back)) back = await uniqueName(m.fromParts || [], m.from, new Set(), m.kind === "dir");
+      await moveEntry(m.kind || "file", src, m.to, dst, back);
       ok++;
       for (let i = m.parts.length; i > 0; i--) dirs.add(m.parts.slice(0,i).join("\u0000"));
     } catch (e) { errors.push(`${m.to} : introuvable ou bloqué`); }
     prog.value++;
   }
-  // supprime les sous-dossiers devenus vides (les plus profonds d'abord)
+  // supprime les dossiers créés par l'appli et devenus vides (les plus profonds d'abord)
   for (const key of [...dirs].sort((a,b)=>b.split("\u0000").length-a.split("\u0000").length)) {
     const parts = key.split("\u0000");
     try {
@@ -306,17 +524,85 @@ async function undo(){
   await kvSet("last", null);
   await refreshUndo();
   root = prevRoot || r;
-  if (!prevRoot) { $("folderName").innerHTML = `<span class="folder">${escapeHtml(r.name)}</span>`; }
+  if (!prevRoot) { $("folderName").innerHTML = `<span class="folder">${escapeHtml(r.name)}</span>`; $("dupScan").disabled = false; }
+  $("pick").disabled = false; $("dupScan").disabled = false;
   await buildPlan();
-  show(`↶ <b>${ok}</b> fichiers remis à leur place.` + (errors.length ? "<br>" + errors.slice(0,10).map(escapeHtml).join("<br>") : ""), errors.length ? "warn" : "ok");
+  show(`↶ <b>${ok}</b> éléments remis à leur place.` + (errors.length ? "<br>" + errors.slice(0,10).map(escapeHtml).join("<br>") : ""), errors.length ? "warn" : "ok");
 }
 
 async function refreshUndo(){
   const last = await kvGet("last");
   $("undo").disabled = !last;
-  $("undoInfo").textContent = last ? `Dernier rangement : « ${last.folder} », ${last.moves.length} fichiers, ${new Date(last.date).toLocaleString("fr-FR")}` : "";
+  $("undoInfo").textContent = last ? `Dernier ${last.title || "rangement"} : « ${last.folder} », ${last.moves.length} éléments, ${new Date(last.date).toLocaleString("fr-FR")}` : "";
 }
-const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- doublons
+async function listAllFiles(dir, parts, out){
+  for await (const [name, h] of dir.entries()) {
+    if (h.kind === "directory") {
+      if (name === DUP_DIR || name.startsWith(".") || name.startsWith("$") || name.toLowerCase() === "node_modules") continue;
+      await listAllFiles(h, [...parts, name], out);
+    } else if (!ignoredFile(name)) {
+      try { const f = await h.getFile(); if (f.size > 0) out.push({parts, name, size:f.size, mtime:f.lastModified, file:f}); } catch {}
+    }
+  }
+  return out;
+}
+async function fingerprint(f){
+  const BIG = 64 * 1024 * 1024, CHUNK = 8 * 1024 * 1024;
+  const data = f.size <= BIG ? await f.arrayBuffer()
+    : await new Blob([f.slice(0, CHUNK), f.slice(f.size - CHUNK), String(f.size)]).arrayBuffer();
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+  return Array.from(h.slice(0, 16), b => b.toString(16).padStart(2,"0")).join("");
+}
+async function scanDuplicates(){
+  if (!root) return;
+  $("dupScan").disabled = true; $("dupMove").classList.add("hidden");
+  $("dupList").innerHTML = ""; $("dupSummary").innerHTML = "";
+  $("dupBusy").classList.remove("hidden"); $("dupBusyText").textContent = "Inventaire des fichiers…";
+  const all = await listAllFiles(root, [], []);
+  const bySize = new Map();
+  for (const f of all) { if (!bySize.has(f.size)) bySize.set(f.size, []); bySize.get(f.size).push(f); }
+  const candidates = [...bySize.values()].filter(g => g.length > 1).flat();
+  const prog = $("dprog"); prog.max = Math.max(candidates.length,1); prog.value = 0;
+  const byHash = new Map();
+  for (const f of candidates) {
+    $("dupBusyText").textContent = `Comparaison ${prog.value + 1} / ${candidates.length}`;
+    try { const k = f.size + ":" + await fingerprint(f.file); if (!byHash.has(k)) byHash.set(k, []); byHash.get(k).push(f); } catch {}
+    prog.value++;
+  }
+  $("dupBusy").classList.add("hidden"); $("dupScan").disabled = false;
+  const groups = [...byHash.values()].filter(g => g.length > 1);
+  // l'original gardé = le plus ancien, puis le chemin le plus court
+  groups.forEach(g => g.sort((a,b) => a.mtime - b.mtime || a.parts.length - b.parts.length || a.name.length - b.name.length));
+  groups.sort((a,b) => b[0].size*(b.length-1) - a[0].size*(a.length-1));
+  const waste = groups.reduce((s,g) => s + g[0].size*(g.length-1), 0);
+  const copies = groups.reduce((s,g) => s + g.length-1, 0);
+  if (!groups.length) { $("dupSummary").innerHTML = `<div class="banner ok" style="margin:0">✨ Aucun doublon parmi ${all.length} fichiers.</div>`; return; }
+  $("dupSummary").innerHTML = `<b>${groups.length}</b> groupe${groups.length>1?"s":""} de doublons · <b>${copies}</b> copie${copies>1?"s":""} en trop · <b>${human(waste)}</b> récupérables <span class="muted">(sur ${all.length} fichiers analysés)</span>`;
+  const path = f => [...f.parts, f.name].join(" \\ ");
+  $("dupList").innerHTML = groups.slice(0, 300).map(g => `
+    <div class="dupgroup"><div class="head"><span>${escapeHtml(g[0].name)}</span><span class="muted">${g.length} × ${human(g[0].size)}</span></div>
+    <ul>${g.map((f,i) => `<li class="${i?"copy":"keep"}">${escapeHtml(path(f))}<span class="tag">${i?"copie":"gardé"}</span></li>`).join("")}</ul></div>`).join("")
+    + (groups.length > 300 ? `<p class="muted">… et ${groups.length-300} autres groupes.</p>` : "");
+  const taken = new Set(); dupPlan = [];
+  for (const g of groups) for (const f of g.slice(1)) {
+    const prefix = f.parts.length ? f.parts.join("_") + "_" : "";
+    dupPlan.push({kind:"file", fromParts:f.parts, name:f.name, parts:[DUP_DIR], newName: await uniqueName([DUP_DIR], prefix + f.name, taken), size:f.size});
+  }
+  const b = $("dupMove"); b.classList.remove("hidden"); b.disabled = false;
+  b.textContent = `Déplacer les ${copies} copies dans « ${DUP_DIR} » (${human(waste)})`;
+}
+async function moveDuplicates(){
+  if (!dupPlan.length) return;
+  if (!confirm(`Déplacer ${dupPlan.length} copies dans le dossier « ${DUP_DIR} » ?\n\nL'original de chaque groupe reste en place. Rien n'est supprimé : vérifie « ${DUP_DIR} » puis supprime-le toi-même si tout est bon. Tu peux aussi annuler.`)) return;
+  const r = await runMoves(dupPlan, "déplacement de doublons");
+  if (!r) return;
+  dupPlan = []; $("dupMove").classList.add("hidden"); $("dupList").innerHTML = ""; $("dupSummary").innerHTML = "";
+  await buildPlan();
+  show(`✅ <b>${r.done.length}</b> copies déplacées dans « ${DUP_DIR} ». Vérifie-le, puis supprime-le pour libérer la place.` +
+    (r.errors.length ? "<br><br>⚠️ " + r.errors.slice(0,10).map(escapeHtml).join("<br>") : ""), r.errors.length ? "warn" : "ok");
+}
 
 // ---------- démarrage
 if (!("showDirectoryPicker" in window)) {
@@ -328,14 +614,21 @@ $("pick").onclick = async () => {
     const h = await window.showDirectoryPicker({id:"rangement-c", mode:"readwrite", startIn:"downloads"});
     root = h;
     $("folderName").innerHTML = `<span class="folder">${escapeHtml(h.name)}</span>`;
+    $("dupScan").disabled = false; $("dupMove").classList.add("hidden"); $("dupList").innerHTML = ""; $("dupSummary").innerHTML = "";
     await buildPlan();
   } catch (e) {
     if (e.name !== "AbortError") show("Ce dossier ne peut pas être utilisé : " + escapeHtml(e.message), "err");
   }
 };
-document.querySelectorAll("input[name=mode]").forEach(r => r.onchange = buildPlan);
+document.querySelectorAll("input[name=mode]").forEach(r => r.onchange = () => {
+  $("sujetHelp").classList.toggle("hidden", r.value !== "sujet" || !r.checked);
+  buildPlan();
+});
+$("withDirs").onchange = buildPlan;
 $("apply").onclick = apply;
 $("undo").onclick = undo;
+$("dupScan").onclick = scanDuplicates;
+$("dupMove").onclick = moveDuplicates;
 refreshUndo();
 </script>
 </body>
